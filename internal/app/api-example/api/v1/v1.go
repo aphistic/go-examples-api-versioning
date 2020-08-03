@@ -3,7 +3,9 @@ package v1
 import (
 	"github.com/go-chi/chi"
 
+	"main/internal/pkg/group"
 	"main/internal/pkg/logging"
+	"main/internal/pkg/user"
 )
 
 type APIV1 struct {
@@ -13,12 +15,16 @@ type APIV1 struct {
 	users  *UsersController
 }
 
-func NewAPIV1(logger logging.Logger) *APIV1 {
+func NewAPIV1(
+	groupService *group.GroupService,
+	userService *user.UserService,
+	logger logging.Logger,
+) *APIV1 {
 	return &APIV1{
 		logger: logger,
 
-		groups: NewGroupsController(logger),
-		users:  NewUsersController(logger),
+		groups: NewGroupsController(groupService, logger),
+		users:  NewUsersController(userService, logger),
 	}
 }
 

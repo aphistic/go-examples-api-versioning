@@ -9,18 +9,26 @@ import (
 
 	v1 "main/internal/app/api-example/api/v1"
 	"main/internal/pkg/logging"
+	"main/internal/pkg/user"
 )
 
 type UsersController struct {
 	logger logging.Logger
 
 	apiV1 *v1.APIV1
+
+	userService *user.UserService
 }
 
-func NewUsersController(apiV1 *v1.APIV1, logger logging.Logger) *UsersController {
+func NewUsersController(
+	apiV1 *v1.APIV1,
+	userService *user.UserService,
+	logger logging.Logger,
+) *UsersController {
 	return &UsersController{
-		logger: logger,
-		apiV1:  apiV1,
+		logger:      logger,
+		apiV1:       apiV1,
+		userService: userService,
 	}
 }
 
@@ -40,11 +48,35 @@ func (uc *UsersController) SetupRoutes(r chi.Router) {
 
 func (uc *UsersController) GetIndex(w http.ResponseWriter, req *http.Request) {
 	uc.logger.Log("Running GET / in v2users.UsersController")
-	w.Write([]byte("GET / v2users.UsersController"))
+
+	users, err := uc.userService.ListUsers()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("GET / v2users.UsersController\n"))
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	// Do what we need to with the users
+	_ = users
+
+	w.Write([]byte("GET / v2users.UsersController\n"))
 }
 
 func (uc *UsersController) GetUser(w http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 	uc.logger.Log("Running GET /{id:%s} in v2users.UsersController", id)
-	w.Write([]byte("GET /{id:" + id + "} v2users.UsersController"))
+
+	reqUser, err := uc.userService.GetUserByID(id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("GET /{id:" + id + "} v2users.UsersController\n"))
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	// Do what we need to with the user
+	_ = reqUser
+
+	w.Write([]byte("GET /{id:" + id + "} v2users.UsersController\n"))
 }

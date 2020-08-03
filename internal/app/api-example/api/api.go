@@ -5,7 +5,9 @@ import (
 
 	v1 "main/internal/app/api-example/api/v1"
 	v2 "main/internal/app/api-example/api/v2"
+	"main/internal/pkg/group"
 	"main/internal/pkg/logging"
+	"main/internal/pkg/user"
 )
 
 type Option func(api *API)
@@ -18,11 +20,21 @@ func WithLogger(logger logging.Logger) Option {
 
 type API struct {
 	logger logging.Logger
+
+	groupService *group.GroupService
+	userService  *user.UserService
 }
 
-func NewAPI(opts ...Option) *API {
+func NewAPI(
+	groupService *group.GroupService,
+	userService *user.UserService,
+	opts ...Option,
+) *API {
 	a := &API{
 		logger: logging.NewNilLogger(),
+
+		userService:  userService,
+		groupService: groupService,
 	}
 
 	for _, opt := range opts {
@@ -43,9 +55,18 @@ func (a *API) SetupRoutes(r chi.Router) {
 
 	// All this domain cares about is that the v1 API should be on /v1 and the v2 API
 	// should be on /v2.
-	apiV1 := v1.NewAPIV1(a.logger)
+	apiV1 := v1.NewAPIV1(
+		a.groupService,
+		a.userService,
+		a.logger,
+	)
 	r.Route("/v1", apiV1.SetupRoutes)
 
-	apiV2 := v2.NewAPIV2(apiV1, a.logger)
+	apiV2 := v2.NewAPIV2(
+		apiV1,
+		a.groupService,
+		a.userService,
+		a.logger,
+	)
 	r.Route("/v2", apiV2.SetupRoutes)
 }

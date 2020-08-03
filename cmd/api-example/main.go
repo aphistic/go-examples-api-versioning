@@ -9,7 +9,9 @@ import (
 
 	"main/internal/app/api-example/api"
 	"main/internal/app/api-example/site"
+	"main/internal/pkg/group"
 	"main/internal/pkg/logging"
+	"main/internal/pkg/user"
 )
 
 func main() {
@@ -23,8 +25,14 @@ func main() {
 	// be skipped if you're just looking for how to set up an API.
 	r.Route("/", site.NewSite().SetupRoutes)
 
+	// Create any services we use in our app
+	groupService := group.NewGroupService()
+	userService := user.NewUserService()
+
 	// Create a root-level API object with our logger
 	httpAPI := api.NewAPI(
+		groupService,
+		userService,
 		api.WithLogger(logger),
 	)
 	// Tell chi to route our API from the /api route. Since the rest of the

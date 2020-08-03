@@ -6,15 +6,19 @@ import (
 	"github.com/go-chi/chi"
 
 	"main/internal/pkg/logging"
+	"main/internal/pkg/user"
 )
 
 type UsersController struct {
 	logger logging.Logger
+
+	userService *user.UserService
 }
 
-func NewUsersController(logger logging.Logger) *UsersController {
+func NewUsersController(userService *user.UserService, logger logging.Logger) *UsersController {
 	return &UsersController{
-		logger: logger,
+		logger:      logger,
+		userService: userService,
 	}
 }
 
@@ -30,16 +34,53 @@ func (uc *UsersController) SetupRoutes(r chi.Router) {
 
 func (uc *UsersController) GetIndex(w http.ResponseWriter, req *http.Request) {
 	uc.logger.Log("Running GET / in v1.UsersController")
-	w.Write([]byte("GET / v1.UsersController"))
+
+	users, err := uc.userService.ListUsers()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("GET / v1.UsersController\n"))
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	// Display users somehow
+	_ = users
+
+	w.Write([]byte("GET / v1.UsersController\n"))
 }
 
 func (uc *UsersController) PostIndex(w http.ResponseWriter, req *http.Request) {
 	uc.logger.Log("Running POST / in v1.UsersController")
-	w.Write([]byte("POST / v1.UsersController"))
+
+	err := uc.userService.CreateUser(&user.User{
+		ID:    "generate somehow",
+		Email: "from post",
+		Name:  "from post",
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("POST / v1.UsersController\n"))
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.Write([]byte("POST / v1.UsersController\n"))
 }
 
 func (uc *UsersController) GetUser(w http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 	uc.logger.Log("Running GET /{id:%s} in v1.UsersController", id)
-	w.Write([]byte("GET /{id:" + id + "} v1.UsersController"))
+
+	reqUser, err := uc.userService.GetUserByID(id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("GET /{id:" + id + "} v1.UsersController\n"))
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	// Do something with the user
+	_ = reqUser
+
+	w.Write([]byte("GET /{id:" + id + "} v1.UsersController\n"))
 }

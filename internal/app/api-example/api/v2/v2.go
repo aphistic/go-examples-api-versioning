@@ -5,24 +5,32 @@ import (
 
 	v1 "main/internal/app/api-example/api/v1"
 	v2users "main/internal/app/api-example/api/v2/users"
+	"main/internal/pkg/group"
 	"main/internal/pkg/logging"
+	"main/internal/pkg/user"
 )
 
 type APIV2 struct {
 	logger logging.Logger
 
-	apiV1  *v1.APIV1
+	apiV1 *v1.APIV1
+
 	groups *GroupsController
 	users  *v2users.UsersController
 }
 
-func NewAPIV2(apiV1 *v1.APIV1, logger logging.Logger) *APIV2 {
+func NewAPIV2(
+	apiV1 *v1.APIV1,
+	groupService *group.GroupService,
+	userService *user.UserService,
+	logger logging.Logger,
+) *APIV2 {
 	return &APIV2{
 		apiV1:  apiV1,
 		logger: logger,
 
-		groups: NewGroupsController(apiV1, logger),
-		users:  v2users.NewUsersController(apiV1, logger),
+		groups: NewGroupsController(apiV1, groupService, logger),
+		users:  v2users.NewUsersController(apiV1, userService, logger),
 	}
 }
 

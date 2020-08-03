@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi"
 
 	v1 "main/internal/app/api-example/api/v1"
+	"main/internal/pkg/group"
 	"main/internal/pkg/logging"
 )
 
@@ -13,12 +14,19 @@ type GroupsController struct {
 	logger logging.Logger
 
 	apiV1 *v1.APIV1
+
+	groupService *group.GroupService
 }
 
-func NewGroupsController(apiV1 *v1.APIV1, logger logging.Logger) *GroupsController {
+func NewGroupsController(
+	apiV1 *v1.APIV1,
+	groupService *group.GroupService,
+	logger logging.Logger,
+) *GroupsController {
 	return &GroupsController{
-		logger: logger,
-		apiV1:  apiV1,
+		logger:       logger,
+		apiV1:        apiV1,
+		groupService: groupService,
 	}
 }
 
@@ -39,5 +47,17 @@ func (gc *GroupsController) SetupRoutes(r chi.Router) {
 func (gc *GroupsController) GetGroup(w http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 	gc.logger.Log("Running GET /{id:%s} in v2.GroupsController", id)
-	w.Write([]byte("GET /{id:" + id + "} v2.GroupsController"))
+
+	reqGroup, err := gc.groupService.GetGroupByID(id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("GET /{id:" + id + "} v2.GroupsController\n"))
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	// Do what we need to with the group
+	_ = reqGroup
+
+	w.Write([]byte("GET /{id:" + id + "} v2.GroupsController\n"))
 }
