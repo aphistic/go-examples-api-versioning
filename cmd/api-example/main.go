@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi"
 
 	"main/internal/app/api-example/api"
+	"main/internal/app/api-example/site"
 	"main/internal/pkg/logging"
 )
 
@@ -18,6 +19,9 @@ func main() {
 	// Create a chi router that we'll use to handle all the incoming
 	// traffic and route it to the right places
 	r := chi.NewRouter()
+	// Set up an index page with some examples, this code can probably
+	// be skipped if you're just looking for how to set up an API.
+	r.Route("/", site.NewSite().SetupRoutes)
 
 	// Create a root-level API object with our logger
 	httpAPI := api.NewAPI(
@@ -47,4 +51,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "http server error: %s\n", err)
 		os.Exit(1)
 	}
+}
+
+func getIndex(w http.ResponseWriter, req *http.Request) {
+
 }
