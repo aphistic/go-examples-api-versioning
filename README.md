@@ -40,3 +40,6 @@ Here's a layout of the API itself:
 The repo is laid out similar to [golang-standards/project-layout](https://github.com/golang-standards/project-layout)
 as I find it's the most extensive, well-documented and accepted example of laying out a Go
 binary project.
+
+The best place to start reading this code is `cmd/api-example/main.go` because that's where the
+initial API and HTTP server are started.
