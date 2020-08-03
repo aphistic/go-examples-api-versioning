@@ -11,7 +11,7 @@ MV part is up to you. :)
 For the code from a v2 api that is the same as the v1 API (it hasn't changed and functions exactly
 the same) I haven't really come up with a pattern that I'm super happy with. The best idea I've had
 so far is to pass an instance of the previous version to the next version and having the next version
-call the previous version. You'll see this in `internal/api-example/api/v2`.
+call the previous version. You'll see this in `internal/app/api-example/api/v2`.
 
 Here's a layout of the API itself:
 
@@ -36,3 +36,7 @@ Here's a layout of the API itself:
       - POST
       - GET /{id}
 ```
+
+The repo is laid out similar to [golang-standards/project-layout](https://github.com/golang-standards/project-layout)
+as I find it's the most extensive, well-documented and accepted example of laying out a Go
+binary project.

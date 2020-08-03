@@ -1,0 +1,2 @@
+language = "go"
+run = "cd cmd/api-example; go build && ./api-example && rm ./api-example"
