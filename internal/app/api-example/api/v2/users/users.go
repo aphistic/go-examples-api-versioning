@@ -8,6 +8,9 @@ import (
 	"github.com/go-chi/chi"
 
 	v1 "main/internal/app/api-example/api/v1"
+	v1models "main/internal/app/api-example/api/v1/models"
+	"main/internal/app/api-example/encoding"
+	"main/internal/pkg/errors"
 	"main/internal/pkg/logging"
 	"main/internal/pkg/user"
 )
@@ -47,36 +50,76 @@ func (uc *UsersController) SetupRoutes(r chi.Router) {
 }
 
 func (uc *UsersController) GetIndex(w http.ResponseWriter, req *http.Request) {
-	uc.logger.Log("Running GET / in v2users.UsersController")
+	uc.logger.Log("Running GET / in v2.UsersController")
 
 	users, err := uc.userService.ListUsers()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("GET / v2users.UsersController\n"))
-		w.Write([]byte(err.Error()))
+		uc.logger.Log("Could not get user list: %s", err)
+		err = encoding.WriteJSONResult(
+			w, http.StatusInternalServerError,
+			v1models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			uc.logger.Log("Could not write error message: %s", err)
+		}
 		return
 	}
 
-	// Do what we need to with the users
-	_ = users
+	// Translate to our view model
+	result := make(ListUsersResponse, 0, len(users))
+	for _, resultUser := range users {
+		result = append(result, &UserResponse{
+			ID:    resultUser.ID,
+			Email: resultUser.Email,
+		})
+	}
 
-	w.Write([]byte("GET / v2users.UsersController\n"))
+	err = encoding.WriteJSONResult(w, http.StatusOK, result)
+	if err != nil {
+		uc.logger.Log("Could not write response: %s\n", err)
+		return
+	}
+	w.Write([]byte("\nGET / v2.UsersController\n"))
 }
 
 func (uc *UsersController) GetUser(w http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
-	uc.logger.Log("Running GET /{id:%s} in v2users.UsersController", id)
+	uc.logger.Log("Running GET /{id:%s} in v2.UsersController", id)
 
 	reqUser, err := uc.userService.GetUserByID(id)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("GET /{id:" + id + "} v2users.UsersController\n"))
-		w.Write([]byte(err.Error()))
+	if err != nil && err == errors.ErrNotFound {
+		err = encoding.WriteJSONResult(
+			w, http.StatusNotFound,
+			&v1models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			uc.logger.Log("Could not write error message: %s", err)
+		}
+		return
+	} else if err != nil {
+		uc.logger.Log("Could not get user: %s", err)
+		err = encoding.WriteJSONResult(
+			w, http.StatusInternalServerError,
+			&v1models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			uc.logger.Log("Could not write error message: %s", err)
+		}
 		return
 	}
 
-	// Do what we need to with the user
-	_ = reqUser
+	err = encoding.WriteJSONResult(
+		w, http.StatusOK,
+		&UserDetailResponse{
+			ID:    reqUser.ID,
+			Email: reqUser.Email,
+			Name:  reqUser.Name,
+		},
+	)
+	if err != nil {
+		uc.logger.Log("Could not write response: %s\n", err)
+		return
+	}
 
-	w.Write([]byte("GET /{id:" + id + "} v2users.UsersController\n"))
+	w.Write([]byte("\nGET /{id:" + id + "} v2.UsersController\n"))
 }

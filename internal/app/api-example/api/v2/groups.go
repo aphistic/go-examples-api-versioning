@@ -6,6 +6,9 @@ import (
 	"github.com/go-chi/chi"
 
 	v1 "main/internal/app/api-example/api/v1"
+	v1models "main/internal/app/api-example/api/v1/models"
+	"main/internal/app/api-example/encoding"
+	"main/internal/pkg/errors"
 	"main/internal/pkg/group"
 	"main/internal/pkg/logging"
 )
@@ -49,15 +52,38 @@ func (gc *GroupsController) GetGroup(w http.ResponseWriter, req *http.Request) {
 	gc.logger.Log("Running GET /{id:%s} in v2.GroupsController", id)
 
 	reqGroup, err := gc.groupService.GetGroupByID(id)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("GET /{id:" + id + "} v2.GroupsController\n"))
-		w.Write([]byte(err.Error()))
+	if err != nil && err == errors.ErrNotFound {
+		err = encoding.WriteJSONResult(
+			w, http.StatusNotFound,
+			&v1models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			gc.logger.Log("Could not write error message: %s", err)
+		}
+		return
+	} else if err != nil {
+		gc.logger.Log("Could not get group: %s", err)
+		err = encoding.WriteJSONResult(
+			w, http.StatusInternalServerError,
+			&v1models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			gc.logger.Log("Could not write error message: %s", err)
+		}
 		return
 	}
 
-	// Do what we need to with the group
-	_ = reqGroup
+	err = encoding.WriteJSONResult(
+		w, http.StatusOK,
+		&GroupDetailResponse{
+			ID:   reqGroup.ID,
+			Name: reqGroup.Name,
+		},
+	)
+	if err != nil {
+		gc.logger.Log("Could not write response: %s\n", err)
+		return
+	}
 
-	w.Write([]byte("GET /{id:" + id + "} v2.GroupsController\n"))
+	w.Write([]byte("\nGET /{id:" + id + "} v2.GroupsController\n"))
 }
