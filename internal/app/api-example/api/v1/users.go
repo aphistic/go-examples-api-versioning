@@ -5,6 +5,9 @@ import (
 
 	"github.com/go-chi/chi"
 
+	"main/internal/app/api-example/api/v1/models"
+	"main/internal/app/api-example/encoding"
+	"main/internal/pkg/errors"
 	"main/internal/pkg/logging"
 	"main/internal/pkg/user"
 )
@@ -37,34 +40,65 @@ func (uc *UsersController) GetIndex(w http.ResponseWriter, req *http.Request) {
 
 	users, err := uc.userService.ListUsers()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("GET / v1.UsersController\n"))
-		w.Write([]byte(err.Error()))
+		uc.logger.Log("Could not get user list: %s", err)
+		err = encoding.WriteJSONResult(
+			w, http.StatusInternalServerError,
+			models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			uc.logger.Log("Could not write error message: %s", err)
+		}
 		return
 	}
 
-	// Display users somehow
-	_ = users
+	// Translate to our view model
+	result := make(models.ListUsersResponse, 0, len(users))
+	for _, resultUser := range users {
+		result = append(result, &models.UserResponse{
+			ID:    resultUser.ID,
+			Email: resultUser.Email,
+		})
+	}
 
-	w.Write([]byte("GET / v1.UsersController\n"))
+	err = encoding.WriteJSONResult(w, http.StatusOK, result)
+	if err != nil {
+		uc.logger.Log("Could not write response: %s\n", err)
+		return
+	}
+	w.Write([]byte("\nGET / v1.UsersController\n"))
 }
 
 func (uc *UsersController) PostIndex(w http.ResponseWriter, req *http.Request) {
 	uc.logger.Log("Running POST / in v1.UsersController")
 
+	generatedID := "generate somehow"
 	err := uc.userService.CreateUser(&user.User{
-		ID:    "generate somehow",
+		ID:    generatedID,
 		Email: "from post",
 		Name:  "from post",
 	})
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("POST / v1.UsersController\n"))
-		w.Write([]byte(err.Error()))
+		uc.logger.Log("Could not create user: %s", err)
+		err = encoding.WriteJSONResult(
+			w, http.StatusInternalServerError,
+			&models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			uc.logger.Log("Could not write error message: %s", err)
+		}
 		return
 	}
 
-	w.Write([]byte("POST / v1.UsersController\n"))
+	err = encoding.WriteJSONResult(
+		w, http.StatusOK,
+		&models.CreateUserResponse{ID: generatedID},
+	)
+	if err != nil {
+		uc.logger.Log("Could not write response: %s\n", err)
+		return
+	}
+
+	w.Write([]byte("\nPOST / v1.UsersController\n"))
 }
 
 func (uc *UsersController) GetUser(w http.ResponseWriter, req *http.Request) {
@@ -72,15 +106,39 @@ func (uc *UsersController) GetUser(w http.ResponseWriter, req *http.Request) {
 	uc.logger.Log("Running GET /{id:%s} in v1.UsersController", id)
 
 	reqUser, err := uc.userService.GetUserByID(id)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("GET /{id:" + id + "} v1.UsersController\n"))
-		w.Write([]byte(err.Error()))
+	if err != nil && err == errors.ErrNotFound {
+		err = encoding.WriteJSONResult(
+			w, http.StatusNotFound,
+			&models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			uc.logger.Log("Could not write error message: %s", err)
+		}
+		return
+	} else if err != nil {
+		uc.logger.Log("Could not get user: %s", err)
+		err = encoding.WriteJSONResult(
+			w, http.StatusInternalServerError,
+			&models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			uc.logger.Log("Could not write error message: %s", err)
+		}
 		return
 	}
 
-	// Do something with the user
-	_ = reqUser
+	err = encoding.WriteJSONResult(
+		w, http.StatusOK,
+		&models.UserDetailResponse{
+			ID:    reqUser.ID,
+			Email: reqUser.Email,
+			Name:  reqUser.Name,
+		},
+	)
+	if err != nil {
+		uc.logger.Log("Could not write response: %s\n", err)
+		return
+	}
 
-	w.Write([]byte("GET /{id:" + id + "} v1.UsersController\n"))
+	w.Write([]byte("\nGET /{id:" + id + "} v1.UsersController\n"))
 }

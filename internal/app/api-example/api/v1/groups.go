@@ -5,6 +5,9 @@ import (
 
 	"github.com/go-chi/chi"
 
+	"main/internal/app/api-example/api/v1/models"
+	"main/internal/app/api-example/encoding"
+	"main/internal/pkg/errors"
 	"main/internal/pkg/group"
 	"main/internal/pkg/logging"
 )
@@ -37,33 +40,64 @@ func (gc *GroupsController) GetIndex(w http.ResponseWriter, req *http.Request) {
 
 	groups, err := gc.groupService.ListGroups()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("GET / v1.GroupsController\n"))
-		w.Write([]byte(err.Error()))
+		gc.logger.Log("Could not get group list: %s", err)
+		err = encoding.WriteJSONResult(
+			w, http.StatusInternalServerError,
+			models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			gc.logger.Log("Could not write error message: %s", err)
+		}
 		return
 	}
 
-	// Do what we need to with the groups!
-	_ = groups
+	// Translate to our view model
+	result := make(models.ListGroupsResponse, 0, len(groups))
+	for _, resultGroup := range groups {
+		result = append(result, &models.GroupResponse{
+			ID:   resultGroup.ID,
+			Name: resultGroup.Name,
+		})
+	}
 
-	w.Write([]byte("GET / v1.GroupsController\n"))
+	err = encoding.WriteJSONResult(w, http.StatusOK, result)
+	if err != nil {
+		gc.logger.Log("Could not write response: %s\n", err)
+		return
+	}
+	w.Write([]byte("\nGET / v1.GroupsController\n"))
 }
 
 func (gc *GroupsController) PostIndex(w http.ResponseWriter, req *http.Request) {
 	gc.logger.Log("Running POST / in v1.GroupsController")
 
+	generatedID := "generate somehow"
 	err := gc.groupService.CreateGroup(&group.Group{
-		ID:   "generate",
+		ID:   generatedID,
 		Name: "from post data",
 	})
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("POST / v1.GroupsController\n"))
-		w.Write([]byte(err.Error()))
+		gc.logger.Log("Could not create group: %s", err)
+		err = encoding.WriteJSONResult(
+			w, http.StatusInternalServerError,
+			models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			gc.logger.Log("Could not write error message: %s", err)
+		}
 		return
 	}
 
-	w.Write([]byte("POST / v1.GroupsController\n"))
+	err = encoding.WriteJSONResult(
+		w, http.StatusOK,
+		&models.CreateGroupResponse{ID: generatedID},
+	)
+	if err != nil {
+		gc.logger.Log("Could not write response: %s\n", err)
+		return
+	}
+
+	w.Write([]byte("\nPOST / v1.GroupsController\n"))
 }
 
 func (gc *GroupsController) GetGroup(w http.ResponseWriter, req *http.Request) {
@@ -71,15 +105,38 @@ func (gc *GroupsController) GetGroup(w http.ResponseWriter, req *http.Request) {
 	gc.logger.Log("Running GET /{id:%s} in v1.GroupsController", id)
 
 	reqGroup, err := gc.groupService.GetGroupByID(id)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("GET /{id:" + id + "} v1.GroupsController\n"))
-		w.Write([]byte(err.Error()))
+	if err != nil && err == errors.ErrNotFound {
+		err = encoding.WriteJSONResult(
+			w, http.StatusNotFound,
+			&models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			gc.logger.Log("Could not write error message: %s", err)
+		}
+		return
+	} else if err != nil {
+		gc.logger.Log("Could not get group: %s", err)
+		err = encoding.WriteJSONResult(
+			w, http.StatusInternalServerError,
+			&models.ErrorResponse{Error: err.Error()},
+		)
+		if err != nil {
+			gc.logger.Log("Could not write error message: %s", err)
+		}
 		return
 	}
 
-	// Do what we need to for returning the group
-	_ = reqGroup
+	err = encoding.WriteJSONResult(
+		w, http.StatusOK,
+		&models.GroupDetailResponse{
+			ID:   reqGroup.ID,
+			Name: reqGroup.Name,
+		},
+	)
+	if err != nil {
+		gc.logger.Log("Could not write response: %s\n", err)
+		return
+	}
 
-	w.Write([]byte("GET /{id:" + id + "} v1.GroupsController\n"))
+	w.Write([]byte("\nGET /{id:" + id + "} v1.GroupsController\n"))
 }

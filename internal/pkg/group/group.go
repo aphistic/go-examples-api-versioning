@@ -1,9 +1,5 @@
 package group
 
-import (
-	"main/internal/pkg/errors"
-)
-
 type Group struct {
 	ID   string
 	Name string
@@ -22,11 +18,13 @@ func (us *GroupService) CreateGroup(group *Group) error {
 
 func (us *GroupService) ListGroups() ([]*Group, error) {
 	// Get all our groups, this would probably have some kind of filter or paging on it
-	return []*Group{}, nil
+	return []*Group{
+		{ID: "id", Name: "name"},
+	}, nil
 }
 
 func (us *GroupService) GetGroupByID(id string) (*Group, error) {
 	// Get the group by the ID, probably not a string but that's easiest
 	// for this example because it's not really important
-	return nil, errors.ErrNotFound
+	return &Group{ID: "id", Name: "name"}, nil
 }

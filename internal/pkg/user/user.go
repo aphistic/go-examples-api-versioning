@@ -1,9 +1,5 @@
 package user
 
-import (
-	"main/internal/pkg/errors"
-)
-
 type User struct {
 	ID    string
 	Email string
@@ -23,11 +19,13 @@ func (us *UserService) CreateUser(user *User) error {
 
 func (us *UserService) ListUsers() ([]*User, error) {
 	// Get all our users, this would probably have some kind of filter or paging on it
-	return []*User{}, nil
+	return []*User{
+		{ID: "id", Email: "email", Name: "name"},
+	}, nil
 }
 
 func (us *UserService) GetUserByID(id string) (*User, error) {
 	// Get the user by the ID, probably not a string but that's easiest
 	// for this example because it's not really important
-	return nil, errors.ErrNotFound
+	return &User{ID: "id", Email: "email", Name: "name"}, nil
 }
